@@ -1,0 +1,50 @@
+# Local observability stack:
+#   docker compose -f docker-compose.telemetry.yml up -d
+#   Grafana http://localhost:3001 — Tempo (traces) and Prometheus (metrics)
+#   are pre-wired; use Explore.
+#
+# Traces are pushed to Tempo over OTLP; metrics are scraped by Prometheus off
+# the app's /metrics endpoint (port 9464, served by the SDK). Both persist to
+# named volumes, so `down` keeps the data — `down -v` drops it.
+services:
+  tempo:
+    image: grafana/tempo:2.7.0
+    restart: unless-stopped
+    command: ['-config.file=/etc/tempo.yaml']
+    volumes:
+      - ./docker/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - '4318:4318' # OTLP/HTTP — OTEL_EXPORTER_OTLP_ENDPOINT
+      - '3200:3200' # Tempo API
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: unless-stopped
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom-data:/prometheus
+    extra_hosts:
+      - 'host.docker.internal:host-gateway' # reach the app on the host
+    ports:
+      - '9090:9090'
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    restart: unless-stopped
+    depends_on: [prometheus, tempo]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./docker/grafana-datasources.yml:/etc/grafana/provisioning/datasources/ds.yml:ro
+      - ./docker/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dash.yml:ro
+      - ./docker/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - '3001:3000' # 3000 is the app's
+
+volumes:
+  tempo-data:
+  prom-data:
+  grafana-data:
