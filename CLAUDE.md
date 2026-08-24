@@ -60,7 +60,7 @@ no dead abstractions.
 | Grafana | Dashboards + Explore | http://localhost:3001 |
 
 ```bash
-docker compose -f docker-compose.telemetry.yml up -d
+docker compose up -d
 npm run start:dev
 ```
 

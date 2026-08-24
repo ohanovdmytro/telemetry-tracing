@@ -1,11 +1,16 @@
 # Local observability stack:
-#   docker compose -f docker-compose.telemetry.yml up -d
+#   docker compose up -d
 #   Grafana http://localhost:3001 — Tempo (traces) and Prometheus (metrics)
 #   are pre-wired; use Explore.
 #
 # Traces are pushed to Tempo over OTLP; metrics are scraped by Prometheus off
 # the app's /metrics endpoint (port 9464, served by the SDK). Both persist to
 # named volumes, so `down` keeps the data — `down -v` drops it.
+#
+# The project name is pinned rather than derived from the directory basename,
+# so renaming the checkout does not orphan the containers and volumes.
+name: telemetry-tracing
+
 services:
   tempo:
     image: grafana/tempo:2.7.0
